@@ -57,7 +57,7 @@ function launch_matlab_workers(cman::MatlabClusterManager, np::Integer, config::
 
     @mget username host
 
-    println("Waiting for jobs to start...")
+    print("Waiting for jobs to start...")
     tmppath, tmpio = mktemp()
     infos = cell(np)
     try
@@ -71,7 +71,6 @@ function launch_matlab_workers(cman::MatlabClusterManager, np::Integer, config::
             # Hack to wait until Julia is running
             local worker_info
             while true
-                sleep(1)
                 eval_string("""
                     state = j.State;
                     warning('off', 'all');
@@ -87,13 +86,16 @@ function launch_matlab_workers(cman::MatlabClusterManager, np::Integer, config::
                     worker_info = read_worker_info(tmpio)
                     worker_info == nothing || break
                 end
+                sleep(0.5)
             end
             infos[i] = worker_info
+            print(".")
         end
     finally
         close(tmpio)
         rm(tmppath)
     end
+    println()
 
     (:io_host, [(infos[i], "$username@$host", merge(config, {:jobvar => jobvar, :jobindex => i})) for i = 1:np])
 end
