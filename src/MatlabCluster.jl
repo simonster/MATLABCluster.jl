@@ -21,19 +21,13 @@ ConnectionInfoIOHack(conninfo::ByteString) = ConnectionInfoIOHack(conninfo, true
 readline(x::ConnectionInfoIOHack) = x.conninfo
 
 # Read the file written by diary and check if Julia is running
-function read_worker_info(io)
-    seek(io, 0)
-    try
-        for l in eachline(io)
-            private_hostname, port = Base.parse_connection_info(l)
-            if private_hostname != ""
-                return ConnectionInfoIOHack(l)
-            end
+function get_worker_info(diary)
+    for l in split(diary, '\n')
+        private_hostname, port = Base.parse_connection_info(l)
+        if private_hostname != ""
+            return ConnectionInfoIOHack(l)
         end
-    finally
-        truncate(io, 0)
     end
-    nothing
 end
 
 function launch_matlab_workers(cman::MatlabClusterManager, np::Integer, config::Dict)
@@ -48,52 +42,50 @@ function launch_matlab_workers(cman::MatlabClusterManager, np::Integer, config::
         username = clust.Username;
         host = clust.Host;
 
-        $jobvar = {};
+        j = createJob(clust);
+        $jobvar = cell($np, 1);
         for i = 1:$(np)
-            j = batch(clust, @() system('$cmd', '-echo'), 0, 'CurrentFolder', '.', 'CaptureDiary', true);
-            $jobvar{end+1} = j;
+            $jobvar{i} = createTask(j, @() system('$cmd', '-echo'), 0, {}, 'CaptureDiary', true);
         end
+        submit(j);
     """)
 
     @mget username host
 
     print("Waiting for jobs to start...")
-    tmppath, tmpio = mktemp()
     infos = cell(np)
-    try
-        for i = 1:np
-            # Wait until MATLAB says job is running
+    for i = 1:np
+        # Wait until MATLAB says job is running
+        eval_string("""
+            j = $jobvar{$i};
+            wait(j, 'running')
+        """)
+
+        # Hack to wait until Julia is running
+        local worker_info
+        while true
             eval_string("""
-                j = $jobvar{$i};
-                wait(j, 'running');
-            """)
-
-            # Hack to wait until Julia is running
-            local worker_info
-            while true
-                eval_string("""
-                    state = j.State;
-                    warning('off', 'all');
-                    diary(j, '$tmppath');
-                    warning('on', 'all');
-                """)
-                @mget state
-
-                if state == "finished"
-                    seek(tmpio, 0)
-                    error("job failed:\n$(chomp(readall(tmpio)))")
-                else
-                    worker_info = read_worker_info(tmpio)
-                    worker_info == nothing || break
+                state = j.State;
+                warning('off', 'all');
+                diary = j.Diary;
+                if isempty(diary)
+                    diary = ' ';
                 end
-                sleep(0.5)
+                warning('on', 'all');
+            """)
+            @mget state
+            @mget diary
+
+            if state == "finished"
+                error("task failed:\n$diary")
+            else
+                worker_info = get_worker_info(diary)
+                worker_info == nothing || break
             end
-            infos[i] = worker_info
-            print(".")
+            sleep(0.25)
         end
-    finally
-        close(tmpio)
-        rm(tmppath)
+        infos[i] = worker_info
+        print(".")
     end
     println()
 
