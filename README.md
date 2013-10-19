@@ -1,14 +1,14 @@
-# MatlabCluster.jl
+# MATLABCluster.jl
 
 To connect to a MATLAB Job Scheduler cluster:
 
 ```julia
-using MatlabCluster
-addprocs(1,                                    # The number of workers you want
-         dir="/path/to/julia/usr/bin",         # Path to Julia on your cluster
-         cman=MatlabClusterManager("profile"), # The cluster profile, set up within MATLAB
-         tunnel=true,                          # Only necessary if the workers are behind NAT
-         sshflags=`-c blowfish`                # Only for NAT; faster than AES (default)
+using MATLABCluster
+addprocs(1,                               # The number of workers you want
+         dir="/path/to/julia/usr/bin",    # Path to Julia on your cluster
+         cman=MATLABManager("profile"),   # The cluster profile, set up within MATLAB
+         tunnel=true,                     # Only necessary if the workers are behind NAT
+         sshflags=`-c blowfish`           # Only for NAT; faster than AES (default)
         )
 ```
 

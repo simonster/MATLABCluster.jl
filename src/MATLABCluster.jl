@@ -1,17 +1,16 @@
-module MatlabCluster
+module MATLABCluster
 
 using MATLAB
 
-export MatlabClusterManager
+export MATLABManager
 import Base.readline
 
-immutable MatlabClusterManager <: ClusterManager
+immutable MATLABManager <: ClusterManager
     profile::ASCIIString
     launch::Function
     manage::Function
 end
-MatlabClusterManager(profile::ASCIIString="") =
-    MatlabClusterManager(profile, launch_matlab_workers, manage_matlab_worker)
+MATLABManager(profile::ASCIIString="") = MATLABManager(profile, launch_matlab_workers, manage_matlab_worker)
 
 type ConnectionInfoIOHack <: IO
     conninfo::ByteString
@@ -30,7 +29,7 @@ function get_worker_info(diary)
     end
 end
 
-function launch_matlab_workers(cman::MatlabClusterManager, np::Integer, config::Dict)
+function launch_matlab_workers(cman::MATLABManager, np::Integer, config::Dict)
     exe = Base.shell_escape("$(config[:dir])/$(config[:exename])")
     exeflags = Base.shell_escape(config[:exeflags].exec...)
     cmd = replace("LD_LIBRARY_PATH= OMP_NUM_THREADS=1 $exe $exeflags", "'", "''")
@@ -73,8 +72,7 @@ function launch_matlab_workers(cman::MatlabClusterManager, np::Integer, config::
                 end
                 warning('on', 'all');
             """)
-            @mget state
-            @mget diary
+            @mget state diary
 
             if state == "finished"
                 error("task failed:\n$diary")
