@@ -16,7 +16,7 @@ type ConnectionInfoIOHack <: IO
     conninfo::ByteString
     line_buffered::Bool # unused
 end
-ConnectionInfoIOHack(conninfo::ByteString) = ConnectionInfoIOHack(conninfo, true)
+ConnectionInfoIOHack(conninfo) = ConnectionInfoIOHack(conninfo, true)
 readline(x::ConnectionInfoIOHack) = x.conninfo
 
 # Read the file written by diary and check if Julia is running
