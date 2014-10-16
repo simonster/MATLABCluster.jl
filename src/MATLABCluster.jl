@@ -78,7 +78,7 @@ function Base.launch(cman::MATLABManager, np::Integer, config::Dict, instances_a
                     worker_info = get_worker_info(diary)
                     worker_info == nothing || break
                 end
-                sleep(0.25)
+                # sleep(0.25)
             end
             inst = (worker_info, "$username@$host", merge(config, Dict(:jobvar => jobvar, :jobindex => i)))
             push!(instances_arr, (inst,))
